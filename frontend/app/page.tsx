@@ -1,69 +1,376 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+
+type Method =
+  | "GET"
+  | "POST"
+  | "PUT"
+  | "PATCH"
+  | "DELETE";
+
+interface HeaderRow {
+  key: string;
+  value: string;
+}
 
 export default function Home() {
+  const [method, setMethod] =
+    useState<Method>("GET");
+
+  const [url, setUrl] = useState("");
+
+  const [headers, setHeaders] =
+    useState<HeaderRow[]>([
+      {
+        key: "",
+        value: "",
+      },
+    ]);
+
+  const [requestBody, setRequestBody] =
+    useState("");
+
+  const [response, setResponse] =
+    useState("");
+
+  const [status, setStatus] =
+    useState<number | null>(null);
+
+  const [responseTime, setResponseTime] =
+    useState<number | null>(null);
+
+  const [loading, setLoading] =
+    useState(false);
+
+  function updateHeader(
+    index: number,
+    field: "key" | "value",
+    value: string
+  ) {
+    const updated = [...headers];
+    const currentRow = updated[index];
+    if (currentRow) {
+      updated[index] = {
+        ...currentRow,
+        [field]: value,
+      };
+    }
+    setHeaders(updated);
+  }
+
+  function addHeader() {
+    setHeaders([
+      ...headers,
+      {
+        key: "",
+        value: "",
+      },
+    ]);
+  }
+
+  function removeHeader(index: number) {
+    setHeaders(
+      headers.filter(
+        (_, headerIndex) =>
+          headerIndex !== index
+      )
+    );
+  }
+
+  async function executeRequest() {
+    setLoading(true);
+    setResponse("");
+    setStatus(null);
+    setResponseTime(null);
+
+    try {
+      const headerObject: Record<
+        string,
+        string
+      > = {};
+
+      headers.forEach((header) => {
+        if (
+          header.key.trim() &&
+          header.value.trim()
+        ) {
+          headerObject[header.key.trim()] =
+            header.value.trim();
+        }
+      });
+
+      let parsedBody: unknown = undefined;
+
+      if (requestBody.trim()) {
+        parsedBody =
+          JSON.parse(requestBody);
+      }
+
+      const result = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/execute`,
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify({
+            method,
+            url,
+            headers: headerObject,
+            body: parsedBody,
+          }),
+        }
+      );
+
+      const data = await result.json();
+
+      if (!result.ok) {
+        setStatus(result.status);
+        setResponse(
+          JSON.stringify(
+            data,
+            null,
+            2
+          )
+        );
+
+        return;
+      }
+
+      setStatus(data.status);
+      setResponseTime(
+        data.responseTime
+      );
+
+      try {
+        const formatted =
+          JSON.stringify(
+            JSON.parse(data.body),
+            null,
+            2
+          );
+
+        setResponse(formatted);
+      } catch {
+        setResponse(data.body);
+      }
+    } catch (error) {
+      if (
+        error instanceof SyntaxError
+      ) {
+        setResponse(
+          "Invalid JSON body."
+        );
+      } else {
+        setResponse(
+          "Failed to execute request."
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <main className="min-h-screen bg-zinc-950 text-white p-8">
+
+      <div className="mx-auto max-w-6xl">
+
+        <h1 className="text-3xl font-bold">
+          TestForge
+        </h1>
+
+        <p className="mt-2 text-zinc-400">
+          API Playground
+        </p>
+
+        {/* Request */}
+
+        <section className="mt-8 rounded-xl border border-zinc-800 p-6">
+
+          <div className="flex gap-3">
+
+            <select
+              value={method}
+              onChange={(event) =>
+                setMethod(
+                  event.target.value as Method
+                )
+              }
+              className="rounded-lg bg-zinc-900 border border-zinc-700 px-4 py-3"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+              <option>GET</option>
+              <option>POST</option>
+              <option>PUT</option>
+              <option>PATCH</option>
+              <option>DELETE</option>
+            </select>
+
+            <input
+              value={url}
+              onChange={(event) =>
+                setUrl(event.target.value)
+              }
+              placeholder="https://example.com/api/users"
+              className="flex-1 rounded-lg bg-zinc-900 border border-zinc-700 px-4 py-3"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+
+            <button
+              onClick={executeRequest}
+              disabled={loading}
+              className="rounded-lg bg-white px-5 py-3 font-medium text-black disabled:opacity-50"
+            >
+              {loading
+                ? "Executing..."
+                : "Execute"}
+            </button>
+
+          </div>
+
+          {/* Headers */}
+
+          <div className="mt-8">
+
+            <div className="flex items-center justify-between">
+
+              <h2 className="text-lg font-semibold">
+                Headers
+              </h2>
+
+              <button
+                onClick={addHeader}
+                className="text-sm text-zinc-300 hover:text-white"
+              >
+                + Add header
+              </button>
+
+            </div>
+
+            <div className="mt-3 space-y-2">
+
+              {headers.map(
+                (header, index) => (
+                  <div
+                    key={index}
+                    className="flex gap-2"
+                  >
+
+                    <input
+                      value={header.key}
+                      onChange={(event) =>
+                        updateHeader(
+                          index,
+                          "key",
+                          event.target.value
+                        )
+                      }
+                      placeholder="Header name"
+                      className="flex-1 rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-2"
+                    />
+
+                    <input
+                      value={header.value}
+                      onChange={(event) =>
+                        updateHeader(
+                          index,
+                          "value",
+                          event.target.value
+                        )
+                      }
+                      placeholder="Header value"
+                      className="flex-1 rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-2"
+                    />
+
+                    <button
+                      onClick={() =>
+                        removeHeader(index)
+                      }
+                      className="px-3 text-zinc-500 hover:text-white"
+                    >
+                      ×
+                    </button>
+
+                  </div>
+                )
+              )}
+
+            </div>
+
+          </div>
+
+          {/* Body */}
+
+          <div className="mt-8">
+
+            <h2 className="text-lg font-semibold">
+              Request Body
+            </h2>
+
+            <textarea
+              value={requestBody}
+              onChange={(event) =>
+                setRequestBody(
+                  event.target.value
+                )
+              }
+              placeholder={`{
+  "name": "John",
+  "email": "john@example.com"
+}`}
+              className="mt-3 h-48 w-full rounded-lg bg-zinc-900 border border-zinc-700 p-4 font-mono text-sm"
+            />
+
+          </div>
+
+        </section>
+
+        {/* Response */}
+
+        <section className="mt-6 rounded-xl border border-zinc-800 p-6">
+
+          <h2 className="text-lg font-semibold">
+            Response
+          </h2>
+
+          <div className="mt-4 flex gap-8">
+
+            <div>
+              <p className="text-sm text-zinc-500">
+                Status
+              </p>
+
+              <p className="mt-1 font-medium">
+                {status ?? "-"}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-sm text-zinc-500">
+                Response Time
+              </p>
+
+              <p className="mt-1 font-medium">
+                {responseTime !== null
+                  ? `${responseTime} ms`
+                  : "-"}
+              </p>
+            </div>
+
+          </div>
+
+          <pre className="mt-6 max-h-[500px] overflow-auto rounded-lg bg-zinc-900 p-5 text-sm">
+            {response ||
+              "No response yet."}
+          </pre>
+
+        </section>
+
+      </div>
+
+    </main>
   );
 }
