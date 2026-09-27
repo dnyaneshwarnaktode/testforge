@@ -1,5 +1,6 @@
 import Groq from "groq-sdk";
 import { z } from "zod";
+import { redactHeaders } from "../../utils/redact-secrets.js";
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
@@ -82,11 +83,23 @@ supported by the supplied evidence.
 export async function analyzeFailure(
   context: FailureContext
 ): Promise<FailureAnalysis> {
+  const safeHeaders =
+    context.test.headers && typeof context.test.headers === "object"
+      ? redactHeaders(
+          context.test.headers as Record<string, unknown>
+        )
+      : context.test.headers;
+
+  const safeTest = {
+    ...context.test,
+    headers: safeHeaders,
+  };
+
   const userPrompt = `
 Analyze the following failed API test.
 
 TEST:
-${JSON.stringify(context.test, null, 2)}
+${JSON.stringify(safeTest, null, 2)}
 
 ASSERTIONS:
 ${JSON.stringify(context.assertions, null, 2)}

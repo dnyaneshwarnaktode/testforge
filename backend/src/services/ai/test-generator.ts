@@ -110,16 +110,35 @@ The JSON must have this structure:
 
 Rules:
 
-1. Generate practical API tests.
-2. Include happy-path tests.
-3. Include important negative tests.
-4. Do not invent unsupported assertion types.
-5. Use status for HTTP status checks.
-6. Use response_time for response-time checks.
-7. Use body_contains when a specific response value
-   should exist.
-8. Return between 1 and 10 tests.
-9. Return JSON only.
+1. Generate happy-path tests.
+
+2. Generate important negative tests.
+
+3. Test missing required fields when
+   request bodies are provided.
+
+4. Test invalid values when they can
+   reasonably be inferred.
+
+5. Test authentication failures when
+   authentication is mentioned.
+
+6. Test HTTP status codes.
+
+7. Test important response fields
+   when they are explicitly described.
+
+8. Avoid duplicate tests.
+
+9. Do not invent undocumented
+   business rules.
+
+10. Every generated test must contain
+    at least one assertion.
+
+11. Generate between 1 and 10 tests.
+
+12. Return JSON only.
 `;
 
 function cleanJson(
