@@ -1,371 +1,193 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { apiFetch } from "@/lib/api";
 
-type Method =
-  | "GET"
-  | "POST"
-  | "PUT"
-  | "PATCH"
-  | "DELETE";
-
-interface HeaderRow {
-  key: string;
-  value: string;
+interface Project {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function Home() {
-  const [method, setMethod] =
-    useState<Method>("GET");
-
-  const [url, setUrl] = useState("");
-
-  const [headers, setHeaders] =
-    useState<HeaderRow[]>([
-      {
-        key: "",
-        value: "",
-      },
-    ]);
-
-  const [requestBody, setRequestBody] =
-    useState("");
-
-  const [response, setResponse] =
-    useState("");
-
-  const [status, setStatus] =
-    useState<number | null>(null);
-
-  const [responseTime, setResponseTime] =
-    useState<number | null>(null);
+  const [projects, setProjects] =
+    useState<Project[]>([]);
 
   const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState("");
+
+  const [projectName, setProjectName] =
+    useState("");
+
+  const [creating, setCreating] =
     useState(false);
 
-  function updateHeader(
-    index: number,
-    field: "key" | "value",
-    value: string
-  ) {
-    const updated = [...headers];
-    const currentRow = updated[index];
-    if (currentRow) {
-      updated[index] = {
-        ...currentRow,
-        [field]: value,
-      };
-    }
-    setHeaders(updated);
-  }
-
-  function addHeader() {
-    setHeaders([
-      ...headers,
-      {
-        key: "",
-        value: "",
-      },
-    ]);
-  }
-
-  function removeHeader(index: number) {
-    setHeaders(
-      headers.filter(
-        (_, headerIndex) =>
-          headerIndex !== index
-      )
-    );
-  }
-
-  async function executeRequest() {
-    setLoading(true);
-    setResponse("");
-    setStatus(null);
-    setResponseTime(null);
-
+  async function loadProjects() {
     try {
-      const headerObject: Record<
-        string,
-        string
-      > = {};
+      setLoading(true);
 
-      headers.forEach((header) => {
-        if (
-          header.key.trim() &&
-          header.value.trim()
-        ) {
-          headerObject[header.key.trim()] =
-            header.value.trim();
-        }
-      });
-
-      let parsedBody: unknown = undefined;
-
-      if (requestBody.trim()) {
-        parsedBody =
-          JSON.parse(requestBody);
-      }
-
-      const result = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/execute`,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-
-          body: JSON.stringify({
-            method,
-            url,
-            headers: headerObject,
-            body: parsedBody,
-          }),
-        }
-      );
-
-      const data = await result.json();
-
-      if (!result.ok) {
-        setStatus(result.status);
-        setResponse(
-          JSON.stringify(
-            data,
-            null,
-            2
-          )
+      const data =
+        await apiFetch<Project[]>(
+          "/api/projects"
         );
 
-        return;
-      }
-
-      setStatus(data.status);
-      setResponseTime(
-        data.responseTime
-      );
-
-      try {
-        const formatted =
-          JSON.stringify(
-            JSON.parse(data.body),
-            null,
-            2
-          );
-
-        setResponse(formatted);
-      } catch {
-        setResponse(data.body);
-      }
+      setProjects(data);
     } catch (error) {
-      if (
-        error instanceof SyntaxError
-      ) {
-        setResponse(
-          "Invalid JSON body."
-        );
-      } else {
-        setResponse(
-          "Failed to execute request."
-        );
-      }
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load projects"
+      );
     } finally {
       setLoading(false);
     }
   }
 
+  async function createProject() {
+    if (!projectName.trim()) {
+      return;
+    }
+
+    try {
+      setCreating(true);
+
+      const project =
+        await apiFetch<Project>(
+          "/api/projects",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              name: projectName,
+            }),
+          }
+        );
+
+      setProjects((current) => [
+        project,
+        ...current,
+      ]);
+
+      setProjectName("");
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to create project"
+      );
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  useEffect(() => {
+    loadProjects();
+  }, []);
+
   return (
-    <main className="min-h-screen bg-zinc-950 text-white p-8">
+    <main className="min-h-screen bg-zinc-950 text-white">
 
-      <div className="mx-auto max-w-6xl">
+      <div className="mx-auto max-w-6xl px-8 py-12">
 
-        <h1 className="text-3xl font-bold">
-          TestForge
-        </h1>
+        <div className="flex items-center justify-between">
 
-        <p className="mt-2 text-zinc-400">
-          API Playground
-        </p>
+          <div>
+            <h1 className="text-3xl font-bold">
+              TestForge
+            </h1>
 
-        {/* Request */}
+            <p className="mt-2 text-zinc-400">
+              API testing workspace
+            </p>
+          </div>
 
-        <section className="mt-8 rounded-xl border border-zinc-800 p-6">
+        </div>
 
-          <div className="flex gap-3">
+        {error && (
+          <div className="mt-6 rounded-lg border border-red-900 bg-red-950/40 p-4 text-red-300">
+            {error}
+          </div>
+        )}
 
-            <select
-              value={method}
-              onChange={(event) =>
-                setMethod(
-                  event.target.value as Method
-                )
-              }
-              className="rounded-lg bg-zinc-900 border border-zinc-700 px-4 py-3"
-            >
-              <option>GET</option>
-              <option>POST</option>
-              <option>PUT</option>
-              <option>PATCH</option>
-              <option>DELETE</option>
-            </select>
+        <section className="mt-10">
+
+          <div className="flex items-center justify-between">
+
+            <h2 className="text-xl font-semibold">
+              Projects
+            </h2>
+
+          </div>
+
+          <div className="mt-4 flex gap-3">
 
             <input
-              value={url}
+              value={projectName}
               onChange={(event) =>
-                setUrl(event.target.value)
+                setProjectName(
+                  event.target.value
+                )
               }
-              placeholder="https://example.com/api/users"
-              className="flex-1 rounded-lg bg-zinc-900 border border-zinc-700 px-4 py-3"
+              placeholder="Project name"
+              className="w-full max-w-md rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 outline-none"
             />
 
             <button
-              onClick={executeRequest}
-              disabled={loading}
+              onClick={createProject}
+              disabled={creating}
               className="rounded-lg bg-white px-5 py-3 font-medium text-black disabled:opacity-50"
             >
-              {loading
-                ? "Executing..."
-                : "Execute"}
+              {creating
+                ? "Creating..."
+                : "Create Project"}
             </button>
 
           </div>
 
-          {/* Headers */}
-
-          <div className="mt-8">
-
-            <div className="flex items-center justify-between">
-
-              <h2 className="text-lg font-semibold">
-                Headers
-              </h2>
-
-              <button
-                onClick={addHeader}
-                className="text-sm text-zinc-300 hover:text-white"
-              >
-                + Add header
-              </button>
-
+          {loading ? (
+            <div className="mt-8 text-zinc-500">
+              Loading projects...
             </div>
-
-            <div className="mt-3 space-y-2">
-
-              {headers.map(
-                (header, index) => (
-                  <div
-                    key={index}
-                    className="flex gap-2"
-                  >
-
-                    <input
-                      value={header.key}
-                      onChange={(event) =>
-                        updateHeader(
-                          index,
-                          "key",
-                          event.target.value
-                        )
-                      }
-                      placeholder="Header name"
-                      className="flex-1 rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-2"
-                    />
-
-                    <input
-                      value={header.value}
-                      onChange={(event) =>
-                        updateHeader(
-                          index,
-                          "value",
-                          event.target.value
-                        )
-                      }
-                      placeholder="Header value"
-                      className="flex-1 rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-2"
-                    />
-
-                    <button
-                      onClick={() =>
-                        removeHeader(index)
-                      }
-                      className="px-3 text-zinc-500 hover:text-white"
-                    >
-                      ×
-                    </button>
-
-                  </div>
-                )
-              )}
-
-            </div>
-
-          </div>
-
-          {/* Body */}
-
-          <div className="mt-8">
-
-            <h2 className="text-lg font-semibold">
-              Request Body
-            </h2>
-
-            <textarea
-              value={requestBody}
-              onChange={(event) =>
-                setRequestBody(
-                  event.target.value
-                )
-              }
-              placeholder={`{
-  "name": "John",
-  "email": "john@example.com"
-}`}
-              className="mt-3 h-48 w-full rounded-lg bg-zinc-900 border border-zinc-700 p-4 font-mono text-sm"
-            />
-
-          </div>
-
-        </section>
-
-        {/* Response */}
-
-        <section className="mt-6 rounded-xl border border-zinc-800 p-6">
-
-          <h2 className="text-lg font-semibold">
-            Response
-          </h2>
-
-          <div className="mt-4 flex gap-8">
-
-            <div>
-              <p className="text-sm text-zinc-500">
-                Status
+          ) : projects.length === 0 ? (
+            <div className="mt-8 rounded-xl border border-dashed border-zinc-800 p-10 text-center">
+              <p className="text-zinc-400">
+                No projects yet.
               </p>
 
-              <p className="mt-1 font-medium">
-                {status ?? "-"}
+              <p className="mt-2 text-sm text-zinc-600">
+                Create your first project above.
               </p>
             </div>
+          ) : (
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 
-            <div>
-              <p className="text-sm text-zinc-500">
-                Response Time
-              </p>
+              {projects.map((project) => (
+                <Link
+                  key={project.id}
+                  href={`/projects/${project.id}`}
+                  className="block rounded-xl border border-zinc-800 bg-zinc-900/40 p-5 transition hover:border-zinc-600"
+                >
 
-              <p className="mt-1 font-medium">
-                {responseTime !== null
-                  ? `${responseTime} ms`
-                  : "-"}
-              </p>
+                  <h3 className="font-semibold">
+                    {project.name}
+                  </h3>
+
+                  <p className="mt-2 text-sm text-zinc-500">
+                    Created{" "}
+                    {new Date(
+                      project.createdAt
+                    ).toLocaleDateString()}
+                  </p>
+
+                </Link>
+              ))}
+
             </div>
-
-          </div>
-
-          <pre className="mt-6 max-h-[500px] overflow-auto rounded-lg bg-zinc-900 p-5 text-sm">
-            {response ||
-              "No response yet."}
-          </pre>
+          )}
 
         </section>
 
