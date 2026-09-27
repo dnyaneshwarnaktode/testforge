@@ -1,5 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import { executeRequest } from "../services/api-executor.js";
+import {
+  evaluateAssertions,
+  isTestPassed,
+  type Assertion,
+} from "../services/assertion-engine.js";
 
 const allowedMethods = [
   "GET",
@@ -14,6 +19,7 @@ interface ExecuteRequestBody {
   url?: string;
   headers?: Record<string, string>;
   body?: unknown;
+  assertions?: Assertion[];
 }
 
 export async function executeRoutes(
@@ -52,7 +58,24 @@ export async function executeRoutes(
         body: body.body,
       });
 
-      return reply.send(result);
+      const assertionResults =
+        body.assertions
+          ? evaluateAssertions(
+              body.assertions,
+              result
+            )
+          : [];
+
+      const passed =
+        body.assertions
+          ? isTestPassed(assertionResults)
+          : null;
+
+      return reply.send({
+        ...result,
+        assertions: assertionResults,
+        passed,
+      });
     }
   );
 }
