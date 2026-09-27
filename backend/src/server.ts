@@ -2,6 +2,8 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 
 import { executeRoutes } from "./routes/execute.js";
+import { projectRoutes } from "./routes/projects.js";
+import { testCaseRoutes } from "./routes/test-cases.js";
 
 const app = Fastify({
   logger: true,
@@ -24,6 +26,8 @@ app.get("/api/health", async () => {
 });
 
 app.register(executeRoutes);
+app.register(projectRoutes);
+app.register(testCaseRoutes);
 
 app.listen({
   port: 4000,
