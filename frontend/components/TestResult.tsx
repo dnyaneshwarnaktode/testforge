@@ -1,3 +1,5 @@
+import AIFailureAnalysis from "./AIFailureAnalysis";
+
 interface AssertionResult {
   id: string;
   type: string;
@@ -28,7 +30,8 @@ export default function TestResult({
   const passed = run.status === "PASSED";
 
   return (
-    <div className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900/40">
+    <>
+      <div className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900/40">
 
       {/* Header */}
 
@@ -173,7 +176,12 @@ export default function TestResult({
 
       </div>
 
-    </div>
+      </div>
+
+      {run.status === "FAILED" && (
+        <AIFailureAnalysis runId={run.id} />
+      )}
+    </>
   );
 }
 
