@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
+import TestResult from "@/components/TestResult";
+import ExecutionHistory from "@/components/ExecutionHistory";
 
 interface TestCase {
   id: string;
@@ -12,9 +14,25 @@ interface TestCase {
   createdAt: string;
 }
 
-interface TestRunResult {
+interface AssertionResult {
   id: string;
+  type: string;
+  passed: boolean;
+  expected: unknown;
+  actual: unknown;
+  message: string;
+}
+
+interface TestRun {
+  id: string;
+  testCaseId: string;
   status: string;
+  responseStatus: number | null;
+  responseTime: number | null;
+  responseBody: unknown;
+  startedAt: string;
+  completedAt: string | null;
+  assertionResults: AssertionResult[];
 }
 
 export default function ProjectPage({
@@ -36,40 +54,42 @@ export default function ProjectPage({
   const [runningTestId, setRunningTestId] =
     useState<string | null>(null);
 
+  const [latestRun, setLatestRun] =
+    useState<TestRun | null>(null);
+
+  const [runs, setRuns] =
+    useState<TestRun[]>([]);
+
+  const [selectedTestId, setSelectedTestId] =
+    useState<string | null>(null);
+
   async function runTest(
     testCaseId: string
   ) {
     try {
       setRunningTestId(testCaseId);
+      setSelectedTestId(testCaseId);
 
       const result =
-        await apiFetch<TestRunResult>(
+        await apiFetch<TestRun>(
           `/api/test-cases/${testCaseId}/run`,
           {
             method: "POST",
           }
         );
 
-      console.log(
-        "Test result:",
-        result
-      );
+      setLatestRun(result);
 
-      alert(
-        result.status === "PASSED"
-          ? "Test passed!"
-          : "Test failed!"
-      );
+      const history =
+        await apiFetch<TestRun[]>(
+          `/api/test-cases/${testCaseId}/runs`
+        );
+
+      setRuns(history);
 
     } catch (error) {
 
       console.error(error);
-
-      alert(
-        error instanceof Error
-          ? error.message
-          : "Test execution failed"
-      );
 
     } finally {
       setRunningTestId(null);
@@ -203,6 +223,14 @@ export default function ProjectPage({
             ))}
 
           </div>
+        )}
+
+        {latestRun && (
+          <TestResult run={latestRun} />
+        )}
+
+        {selectedTestId && (
+          <ExecutionHistory runs={runs} />
         )}
 
       </div>
