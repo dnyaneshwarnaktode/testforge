@@ -78,6 +78,13 @@ export default function ProjectPage({
             </h1>
           </div>
 
+          <Link
+            href={`/projects/${projectId}/new`}
+            className="rounded-lg bg-white px-5 py-3 text-sm font-medium text-black"
+          >
+            + Create Test
+          </Link>
+
         </div>
 
         {loading ? (
