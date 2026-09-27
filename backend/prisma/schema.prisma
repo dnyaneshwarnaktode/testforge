@@ -28,7 +28,38 @@ model TestCase {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  testRuns TestRun[]
 
   @@index([projectId])
+}
+
+model TestRun {
+  id             String    @id @default(cuid())
+  testCaseId     String
+  status         String
+  responseStatus Int?
+  responseTime   Int?
+  responseBody   Json?
+  startedAt      DateTime  @default(now())
+  completedAt    DateTime?
+
+  testCase         TestCase          @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  assertionResults AssertionResult[]
+
+  @@index([testCaseId])
+}
+
+model AssertionResult {
+  id        String  @id @default(cuid())
+  testRunId String
+  type      String
+  passed    Boolean
+  expected  Json?
+  actual    Json?
+  message   String
+
+  testRun TestRun @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+
+  @@index([testRunId])
 }

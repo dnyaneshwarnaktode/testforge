@@ -1,0 +1,104 @@
+import { prisma } from "../lib/prisma.js";
+import {
+  evaluateAssertions,
+  isTestPassed,
+  type Assertion,
+  type TestResponse,
+} from "./assertion-engine.js";
+import { executeRequest } from "./api-executor.js";
+import type { Prisma } from "@prisma/client";
+
+function tryParseJson(value: string): Prisma.InputJsonValue {
+  try {
+    return JSON.parse(value) as Prisma.InputJsonValue;
+  } catch {
+    return {
+      raw: value,
+    };
+  }
+}
+
+export async function runTestCase(testCaseId: string) {
+  const testCase = await prisma.testCase.findUnique({
+    where: {
+      id: testCaseId,
+    },
+  });
+
+  if (!testCase) {
+    throw new Error("Test case not found");
+  }
+
+  const startedAt = new Date();
+
+  try {
+    const result = await executeRequest({
+      method: testCase.method,
+      url: testCase.url,
+      headers:
+        (testCase.headers as Record<string, string> | null) ?? undefined,
+      body: testCase.body,
+    });
+
+    const response: TestResponse = {
+      status: result.status,
+      responseTime: result.responseTime,
+      body: result.body,
+    };
+
+    const assertions =
+      (testCase.assertions as Assertion[] | null) ?? [];
+
+    const assertionResults = evaluateAssertions(assertions, response);
+
+    const passed = isTestPassed(assertionResults);
+
+    const testRun = await prisma.testRun.create({
+      data: {
+        testCaseId: testCase.id,
+        status: passed ? "PASSED" : "FAILED",
+        responseStatus: result.status,
+        responseTime: result.responseTime,
+        responseBody: tryParseJson(result.body),
+        startedAt,
+        completedAt: new Date(),
+
+        assertionResults: {
+          create: assertionResults.map((assertion) => {
+            const item: Prisma.AssertionResultCreateWithoutTestRunInput = {
+              type: assertion.type,
+              passed: assertion.passed,
+              message: assertion.message,
+            };
+            if (assertion.expected !== undefined) {
+              item.expected = assertion.expected as Prisma.InputJsonValue;
+            }
+            if (assertion.actual !== undefined) {
+              item.actual = assertion.actual as Prisma.InputJsonValue;
+            }
+            return item;
+          }),
+        },
+      },
+      include: {
+        assertionResults: true,
+      },
+    });
+
+    return testRun;
+  } catch (error) {
+    await prisma.testRun.create({
+      data: {
+        testCaseId: testCase.id,
+        status: "ERROR",
+        startedAt,
+        completedAt: new Date(),
+      },
+      include: {
+        assertionResults: true,
+      },
+    });
+
+    throw error;
+  }
+}

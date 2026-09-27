@@ -18,7 +18,12 @@ export async function executeRequest(
     requestInit.headers = request.headers;
   }
 
-  if (request.body !== undefined) {
+  if (
+    request.method !== "GET" &&
+    request.method !== "HEAD" &&
+    request.body !== undefined &&
+    request.body !== null
+  ) {
     requestInit.body = JSON.stringify(request.body);
   }
 
