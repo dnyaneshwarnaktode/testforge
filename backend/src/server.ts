@@ -5,6 +5,7 @@ import { executeRoutes } from "./routes/execute.js";
 import { projectRoutes } from "./routes/projects.js";
 import { testCaseRoutes } from "./routes/test-cases.js";
 import { testRunRoutes } from "./routes/test-runs.js";
+import { aiRoutes } from "./routes/ai.js";
 
 const app = Fastify({
   logger: true,
@@ -30,6 +31,7 @@ app.register(executeRoutes);
 app.register(projectRoutes);
 app.register(testCaseRoutes);
 app.register(testRunRoutes);
+app.register(aiRoutes);
 
 app.listen({
   port: 4000,

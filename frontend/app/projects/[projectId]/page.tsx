@@ -146,12 +146,21 @@ export default function ProjectPage({
             </h1>
           </div>
 
-          <Link
-            href={`/projects/${projectId}/new`}
-            className="rounded-lg bg-white px-5 py-3 text-sm font-medium text-black"
-          >
-            + Create Test
-          </Link>
+          <div className="flex gap-3">
+            <Link
+              href={`/projects/${projectId}/ai`}
+              className="rounded-lg border border-purple-500/40 bg-purple-950/30 px-4 py-3 text-sm font-medium text-purple-200 transition hover:bg-purple-900/40"
+            >
+              ✨ AI Generator
+            </Link>
+
+            <Link
+              href={`/projects/${projectId}/new`}
+              className="rounded-lg bg-white px-5 py-3 text-sm font-medium text-black"
+            >
+              + Create Test
+            </Link>
+          </div>
 
         </div>
 
