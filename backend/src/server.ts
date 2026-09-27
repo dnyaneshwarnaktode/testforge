@@ -15,6 +15,22 @@ app.register(cors, {
   origin: "http://localhost:3000",
 });
 
+app.addContentTypeParser(
+  "application/json",
+  { parseAs: "string" },
+  (req, body: string, done) => {
+    if (!body || !body.trim()) {
+      done(null, {});
+      return;
+    }
+    try {
+      done(null, JSON.parse(body));
+    } catch (err) {
+      done(err as Error, undefined);
+    }
+  }
+);
+
 app.get("/", async () => {
   return {
     message: "TestForge API is running",
