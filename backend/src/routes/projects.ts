@@ -1,12 +1,13 @@
 import type { FastifyInstance } from "fastify";
-import { getAuth } from "@clerk/fastify";
 import { prisma } from "../lib/prisma.js";
+import { requireAuth, verifyProjectOwnership } from "../lib/auth.js";
 
-export async function projectRoutes(
-  app: FastifyInstance
-) {
+export async function projectRoutes(app: FastifyInstance) {
+  // Create a new project - strictly requires authentication
   app.post("/api/projects", async (request, reply) => {
-    const auth = getAuth(request);
+    const userId = await requireAuth(request, reply);
+    if (!userId) return;
+
     const body = request.body as {
       name?: string;
     };
@@ -20,33 +21,61 @@ export async function projectRoutes(
     const project = await prisma.project.create({
       data: {
         name: body.name.trim(),
-        userId: auth.userId ?? null,
+        userId,
       },
     });
 
     return reply.status(201).send(project);
   });
 
-  app.get("/api/projects", async (request) => {
-    const auth = getAuth(request);
-
-    const where = auth.userId
-      ? {
-          OR: [
-            { userId: auth.userId },
-            { userId: null },
-          ],
-        }
-      : {};
+  // List projects for the authenticated tenant only
+  app.get("/api/projects", async (request, reply) => {
+    const userId = await requireAuth(request, reply);
+    if (!userId) return;
 
     return prisma.project.findMany({
-      where,
+      where: {
+        userId,
+      },
       orderBy: {
         createdAt: "desc",
       },
     });
   });
 
+  // Claim legacy unowned projects for the current user
+  app.post("/api/projects/claim-legacy", async (request, reply) => {
+    const userId = await requireAuth(request, reply);
+    if (!userId) return;
+
+    const result = await prisma.project.updateMany({
+      where: {
+        userId: null,
+      },
+      data: {
+        userId,
+      },
+    });
+
+    return reply.send({
+      message: `Successfully claimed ${result.count} legacy projects to your account.`,
+      claimed: result.count,
+    });
+  });
+
+  // Get project details with ownership verification
+  app.get("/api/projects/:projectId", async (request, reply) => {
+    const { projectId } = request.params as {
+      projectId: string;
+    };
+
+    const authResult = await verifyProjectOwnership(request, reply, projectId);
+    if (!authResult) return;
+
+    return authResult.project;
+  });
+
+  // Get project stats with ownership verification
   app.get(
     "/api/projects/:projectId/stats",
     async (request, reply) => {
@@ -54,15 +83,8 @@ export async function projectRoutes(
         projectId: string;
       };
 
-      const project = await prisma.project.findUnique({
-        where: { id: projectId },
-      });
-
-      if (!project) {
-        return reply.status(404).send({
-          error: "Project not found",
-        });
-      }
+      const authResult = await verifyProjectOwnership(request, reply, projectId);
+      if (!authResult) return;
 
       const totalTests = await prisma.testCase.count({
         where: { projectId },
@@ -97,6 +119,7 @@ export async function projectRoutes(
     }
   );
 
+  // Generate AI insights with ownership verification
   app.post(
     "/api/projects/:projectId/insights",
     async (request, reply) => {
@@ -104,15 +127,8 @@ export async function projectRoutes(
         projectId: string;
       };
 
-      const project = await prisma.project.findUnique({
-        where: { id: projectId },
-      });
-
-      if (!project) {
-        return reply.status(404).send({
-          error: "Project not found",
-        });
-      }
+      const authResult = await verifyProjectOwnership(request, reply, projectId);
+      if (!authResult) return;
 
       const recentRuns = await prisma.testRun.findMany({
         where: {

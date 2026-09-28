@@ -73,6 +73,8 @@ export default function ProjectPage({
   const [selectedTestId, setSelectedTestId] = useState<string | null>(null);
   const [runError, setRunError] = useState("");
 
+  const [pageError, setPageError] = useState("");
+
   // AI Insights State
   const [showInsights, setShowInsights] = useState(false);
   const [insightsLoading, setInsightsLoading] = useState(false);
@@ -158,6 +160,8 @@ export default function ProjectPage({
       setProjectId(pid);
 
       try {
+        setLoading(true);
+        setPageError("");
         const data = await apiFetch<TestCase[]>(
           `/api/projects/${pid}/test-cases`
         );
@@ -165,6 +169,11 @@ export default function ProjectPage({
         await fetchStats(pid);
       } catch (error) {
         console.error(error);
+        setPageError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load project"
+        );
       } finally {
         setLoading(false);
       }
@@ -224,11 +233,24 @@ export default function ProjectPage({
           </div>
         </div>
 
-        {runError && (
-          <div className="mt-6 rounded-lg border border-red-900 bg-red-950/40 p-4 text-sm text-red-300">
-            {runError}
+        {pageError ? (
+          <div className="mt-8 rounded-xl border border-red-900 bg-red-950/40 p-8 text-center">
+            <p className="text-lg font-semibold text-red-300">Access Denied or Project Not Found</p>
+            <p className="mt-2 text-sm text-zinc-400">{pageError}</p>
+            <Link
+              href="/"
+              className="mt-5 inline-block rounded-lg bg-zinc-800 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 transition-colors"
+            >
+              ← Return to My Projects
+            </Link>
           </div>
-        )}
+        ) : (
+          <>
+            {runError && (
+              <div className="mt-6 rounded-lg border border-red-900 bg-red-950/40 p-4 text-sm text-red-300">
+                {runError}
+              </div>
+            )}
 
         {/* Dashboard Metrics */}
         {stats && (
@@ -428,6 +450,8 @@ export default function ProjectPage({
         {latestRun && <TestResult run={latestRun} />}
 
         {selectedTestId && <ExecutionHistory runs={runs} />}
+          </>
+        )}
       </div>
     </main>
   );
