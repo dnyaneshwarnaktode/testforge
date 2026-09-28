@@ -1,10 +1,12 @@
 import type { FastifyInstance } from "fastify";
+import { getAuth } from "@clerk/fastify";
 import { prisma } from "../lib/prisma.js";
 
 export async function projectRoutes(
   app: FastifyInstance
 ) {
   app.post("/api/projects", async (request, reply) => {
+    const auth = getAuth(request);
     const body = request.body as {
       name?: string;
     };
@@ -18,14 +20,27 @@ export async function projectRoutes(
     const project = await prisma.project.create({
       data: {
         name: body.name.trim(),
+        userId: auth.userId ?? null,
       },
     });
 
     return reply.status(201).send(project);
   });
 
-  app.get("/api/projects", async () => {
+  app.get("/api/projects", async (request) => {
+    const auth = getAuth(request);
+
+    const where = auth.userId
+      ? {
+          OR: [
+            { userId: auth.userId },
+            { userId: null },
+          ],
+        }
+      : {};
+
     return prisma.project.findMany({
+      where,
       orderBy: {
         createdAt: "desc",
       },

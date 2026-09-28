@@ -10,10 +10,13 @@ datasource db {
 model Project {
   id        String   @id @default(cuid())
   name      String
+  userId    String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   testCases TestCase[]
+
+  @@index([userId])
 }
 
 model TestCase {

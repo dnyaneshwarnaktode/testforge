@@ -2,6 +2,8 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 
+import { clerkPlugin } from "@clerk/fastify";
+
 import { executeRoutes } from "./routes/execute.js";
 import { projectRoutes } from "./routes/projects.js";
 import { testCaseRoutes } from "./routes/test-cases.js";
@@ -12,9 +14,13 @@ const app = Fastify({
   logger: true,
 });
 
-app.register(cors, {
+await app.register(cors, {
   origin: "http://localhost:3000",
+  credentials: true,
+  allowedHeaders: ["Content-Type", "Authorization"],
 });
+
+await app.register(clerkPlugin);
 
 app.addContentTypeParser(
   "application/json",
