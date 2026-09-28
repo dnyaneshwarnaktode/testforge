@@ -15,8 +15,23 @@ const app = Fastify({
   logger: true,
 });
 
+const allowedOrigins = [
+  "http://localhost:3000",
+  process.env.FRONTEND_URL,
+].filter(Boolean) as string[];
+
 await app.register(cors, {
-  origin: "http://localhost:3000",
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
+    if (
+      allowedOrigins.includes(origin) ||
+      origin.endsWith(".vercel.app") ||
+      origin === "http://localhost:3000"
+    ) {
+      return cb(null, true);
+    }
+    return cb(null, false);
+  },
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization"],
 });
@@ -60,7 +75,9 @@ await app.register(rateLimit, {
   max: 100,
   timeWindow: 60 * 1000,
 });
+const PORT = Number(process.env.PORT) || 4000;
+
 app.listen({
-  port: 4000,
+  port: PORT,
   host: "0.0.0.0",
 });
