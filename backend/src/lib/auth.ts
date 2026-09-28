@@ -46,7 +46,8 @@ export async function verifyProjectOwnership(
   }
 
   // If the project has an owner and it doesn't match the current user, forbid access
-  if (project.userId && project.userId !== userId) {
+  const projectOwnerId = (project as { userId?: string | null }).userId;
+  if (projectOwnerId && projectOwnerId !== userId) {
     reply.status(403).send({
       error: "Forbidden",
       message: "Access denied. You do not own this project.",
@@ -55,10 +56,10 @@ export async function verifyProjectOwnership(
   }
 
   // If project is legacy unowned (userId === null), automatically bind it to the requesting user to prevent cross-tenant sharing
-  if (!project.userId) {
+  if (!projectOwnerId) {
     const updated = await prisma.project.update({
       where: { id: projectId },
-      data: { userId },
+      data: { userId } as any,
     });
     return { userId, project: updated };
   }

@@ -27,7 +27,8 @@ export async function testRunRoutes(app: FastifyInstance) {
         });
       }
 
-      if (testCase.project.userId && testCase.project.userId !== userId) {
+      const projectOwnerId = (testCase.project as { userId?: string | null }).userId;
+      if (projectOwnerId && projectOwnerId !== userId) {
         return reply.status(403).send({
           error: "Forbidden",
           message: "Access denied. You do not own the project for this test case.",
@@ -71,7 +72,8 @@ export async function testRunRoutes(app: FastifyInstance) {
         });
       }
 
-      if (testCase.project.userId && testCase.project.userId !== userId) {
+      const projectOwnerId = (testCase.project as { userId?: string | null }).userId;
+      if (projectOwnerId && projectOwnerId !== userId) {
         return reply.status(403).send({
           error: "Forbidden",
           message: "Access denied. You do not own the project for this test case.",

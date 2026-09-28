@@ -22,7 +22,7 @@ export async function projectRoutes(app: FastifyInstance) {
       data: {
         name: body.name.trim(),
         userId,
-      },
+      } as any,
     });
 
     return reply.status(201).send(project);
@@ -36,7 +36,7 @@ export async function projectRoutes(app: FastifyInstance) {
     return prisma.project.findMany({
       where: {
         userId,
-      },
+      } as any,
       orderBy: {
         createdAt: "desc",
       },
@@ -51,10 +51,10 @@ export async function projectRoutes(app: FastifyInstance) {
     const result = await prisma.project.updateMany({
       where: {
         userId: null,
-      },
+      } as any,
       data: {
         userId,
-      },
+      } as any,
     });
 
     return reply.send({
