@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import TestResult from "@/components/TestResult";
 import ExecutionHistory from "@/components/ExecutionHistory";
@@ -55,14 +56,9 @@ interface ProjectInsights {
   systemicSuggestions: string[];
 }
 
-export default function ProjectPage({
-  params,
-}: {
-  params: Promise<{
-    projectId: string;
-  }>;
-}) {
-  const [projectId, setProjectId] = useState("");
+export default function ProjectPage() {
+  const routeParams = useParams();
+  const projectId = (routeParams?.projectId as string) || "";
   const [testCases, setTestCases] = useState<TestCase[]>([]);
   const [stats, setStats] = useState<ProjectStats | null>(null);
 
@@ -154,19 +150,17 @@ export default function ProjectPage({
   }
 
   useEffect(() => {
-    async function load() {
-      const resolvedParams = await params;
-      const pid = resolvedParams.projectId;
-      setProjectId(pid);
+    if (!projectId) return;
 
+    async function load() {
       try {
         setLoading(true);
         setPageError("");
         const data = await apiFetch<TestCase[]>(
-          `/api/projects/${pid}/test-cases`
+          `/api/projects/${projectId}/test-cases`
         );
         setTestCases(data);
-        await fetchStats(pid);
+        await fetchStats(projectId);
       } catch (error) {
         console.error(error);
         setPageError(
@@ -180,7 +174,7 @@ export default function ProjectPage({
     }
 
     load();
-  }, [params]);
+  }, [projectId]);
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
