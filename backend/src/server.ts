@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import rateLimit from "@fastify/rate-limit";
 
 import { executeRoutes } from "./routes/execute.js";
 import { projectRoutes } from "./routes/projects.js";
@@ -48,7 +49,10 @@ app.register(projectRoutes);
 app.register(testCaseRoutes);
 app.register(testRunRoutes);
 app.register(aiRoutes);
-
+await app.register(rateLimit, {
+  max: 100,
+  timeWindow: 60 * 1000,
+});
 app.listen({
   port: 4000,
   host: "0.0.0.0",

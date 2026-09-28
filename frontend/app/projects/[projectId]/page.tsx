@@ -71,6 +71,7 @@ export default function ProjectPage({
   const [latestRun, setLatestRun] = useState<TestRun | null>(null);
   const [runs, setRuns] = useState<TestRun[]>([]);
   const [selectedTestId, setSelectedTestId] = useState<string | null>(null);
+  const [runError, setRunError] = useState("");
 
   // AI Insights State
   const [showInsights, setShowInsights] = useState(false);
@@ -118,6 +119,7 @@ export default function ProjectPage({
     try {
       setRunningTestId(testCaseId);
       setSelectedTestId(testCaseId);
+      setRunError("");
 
       const result = await apiFetch<TestRun>(
         `/api/test-cases/${testCaseId}/run`,
@@ -139,6 +141,11 @@ export default function ProjectPage({
       }
     } catch (error) {
       console.error(error);
+      setRunError(
+        error instanceof Error
+          ? error.message
+          : "Failed to execute test run"
+      );
     } finally {
       setRunningTestId(null);
     }
@@ -186,6 +193,13 @@ export default function ProjectPage({
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/playground"
+              className="rounded-lg border border-zinc-800 bg-zinc-900 px-3.5 py-2.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 flex items-center gap-1.5"
+            >
+              <span>⚡</span> Playground
+            </Link>
+
             <button
               type="button"
               onClick={loadInsights}
@@ -209,6 +223,12 @@ export default function ProjectPage({
             </Link>
           </div>
         </div>
+
+        {runError && (
+          <div className="mt-6 rounded-lg border border-red-900 bg-red-950/40 p-4 text-sm text-red-300">
+            {runError}
+          </div>
+        )}
 
         {/* Dashboard Metrics */}
         {stats && (

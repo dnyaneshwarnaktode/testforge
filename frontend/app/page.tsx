@@ -94,7 +94,6 @@ export default function Home() {
       <div className="mx-auto max-w-6xl px-8 py-12">
 
         <div className="flex items-center justify-between">
-
           <div>
             <h1 className="text-3xl font-bold">
               TestForge
@@ -105,6 +104,12 @@ export default function Home() {
             </p>
           </div>
 
+          <Link
+            href="/playground"
+            className="rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800"
+          >
+            ⚡ API Playground
+          </Link>
         </div>
 
         {error && (

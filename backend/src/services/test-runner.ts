@@ -6,7 +6,7 @@ import {
   type TestResponse,
 } from "./assertion-engine.js";
 import { executeRequest } from "./api-executor.js";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 function tryParseJson(value: string): Prisma.InputJsonValue {
   try {
@@ -44,14 +44,27 @@ export async function runTestCase(testCaseId: string) {
       status: result.status,
       responseTime: result.responseTime,
       body: result.body,
+      error: result.error,
     };
 
     const assertions =
       (testCase.assertions as Assertion[] | null) ?? [];
 
-    const assertionResults = evaluateAssertions(assertions, response);
+    let assertionResults = evaluateAssertions(assertions, response);
 
-    const passed = isTestPassed(assertionResults);
+    if (result.error && assertionResults.length === 0) {
+      assertionResults = [
+        {
+          type: "status",
+          passed: false,
+          expected: "200 (Reachable Endpoint)",
+          actual: null,
+          message: `Endpoint unavailable: ${result.error}`,
+        },
+      ];
+    }
+
+    const passed = !result.error && isTestPassed(assertionResults);
 
     const testRun = await prisma.testRun.create({
       data: {
@@ -87,18 +100,35 @@ export async function runTestCase(testCaseId: string) {
 
     return testRun;
   } catch (error) {
-    await prisma.testRun.create({
+    const errMessage =
+      error instanceof Error ? error.message : "Test execution failed";
+
+    const testRun = await prisma.testRun.create({
       data: {
         testCaseId: testCase.id,
-        status: "ERROR",
+        status: "FAILED",
+        responseStatus: null,
+        responseTime: 0,
+        responseBody: { error: "Execution Error", message: errMessage },
         startedAt,
         completedAt: new Date(),
+        assertionResults: {
+          create: [
+            {
+              type: "status",
+              passed: false,
+              expected: "Reachable Endpoint",
+              actual: Prisma.JsonNull,
+              message: `Execution failed: ${errMessage}`,
+            },
+          ],
+        },
       },
       include: {
         assertionResults: true,
       },
     });
 
-    throw error;
+    return testRun;
   }
 }

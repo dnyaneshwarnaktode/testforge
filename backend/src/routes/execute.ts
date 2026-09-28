@@ -62,12 +62,19 @@ export async function executeRoutes(
         body.assertions
           ? evaluateAssertions(
               body.assertions,
-              result
+              {
+                status: result.status,
+                responseTime: result.responseTime,
+                body: result.body,
+                error: result.error,
+              }
             )
           : [];
 
       const passed =
-        body.assertions
+        result.error
+          ? false
+          : body.assertions
           ? isTestPassed(assertionResults)
           : null;
 
