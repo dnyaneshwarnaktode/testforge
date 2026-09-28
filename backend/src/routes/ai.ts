@@ -83,10 +83,8 @@ export async function aiRoutes(app: FastifyInstance) {
         });
       }
 
-      if (
-        run.testCase.project.userId &&
-        run.testCase.project.userId !== userId
-      ) {
+      const projectOwnerId = (run.testCase.project as { userId?: string | null }).userId;
+      if (projectOwnerId && projectOwnerId !== userId) {
         return reply.status(403).send({
           error: "Forbidden",
           message: "Access denied. You do not own the project for this test run.",
