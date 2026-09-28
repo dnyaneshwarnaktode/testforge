@@ -43,15 +43,16 @@ export default function Home() {
   }, [api, isSignedIn]);
 
   useEffect(() => {
-    if (authLoaded) {
-      if (isSignedIn) {
-        loadProjects();
-      } else {
-        setProjects([]);
-        setError("");
-      }
+    if (!authLoaded) return;
+
+    if (isSignedIn && userId) {
+      loadProjects();
+    } else {
+      setProjects([]);
+      setError("");
     }
-  }, [authLoaded, isSignedIn, userId, loadProjects]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoaded, isSignedIn, userId]);
 
   async function createProject() {
     if (!projectName.trim()) {

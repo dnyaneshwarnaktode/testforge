@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react";
 import { useAuth } from "@clerk/nextjs";
 
 const API_URL =
@@ -81,16 +82,19 @@ export async function apiFetch<T>(
 export function useApiClient() {
   const { getToken, isSignedIn, isLoaded, userId } = useAuth();
 
-  const fetchWithAuth = async <T>(
-    path: string,
-    options?: RequestInit
-  ): Promise<T> => {
-    let token: string | null = null;
-    if (isSignedIn) {
-      token = await getToken();
-    }
-    return apiFetch<T>(path, options, token);
-  };
+  const fetchWithAuth = useCallback(
+    async <T>(
+      path: string,
+      options?: RequestInit
+    ): Promise<T> => {
+      let token: string | null = null;
+      if (isSignedIn) {
+        token = await getToken();
+      }
+      return apiFetch<T>(path, options, token);
+    },
+    [getToken, isSignedIn]
+  );
 
   return {
     fetch: fetchWithAuth,
@@ -99,3 +103,4 @@ export function useApiClient() {
     userId,
   };
 }
+
